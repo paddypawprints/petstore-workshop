@@ -1,0 +1,1 @@
+"""Petstore FastAPI application package."""
