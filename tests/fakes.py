@@ -1,8 +1,9 @@
 """In-memory stand-ins for the DynamoDB stores, swapped in with app.dependency_overrides."""
 
-from app.models import Order, Pet
+from app.models import Order, Pet, User
 from app.stores.orders import OrderStore
 from app.stores.pets import PetStore
+from app.stores.users import UserStore, hash_password
 
 
 class FakePetStore(PetStore):
@@ -45,3 +46,31 @@ class FakeOrderStore(OrderStore):
 
     def delete(self, order_id: int) -> bool:
         return self.orders.pop(order_id, None) is not None
+
+
+class FakeUserStore(UserStore):
+    def __init__(self) -> None:
+        # username -> (user without password, password hash)
+        self.users: dict[str, tuple[User, str | None]] = {}
+
+    def get(self, username: str) -> User | None:
+        entry = self.users.get(username)
+        return entry[0] if entry else None
+
+    def create(self, user: User) -> bool:
+        if user.username in self.users:
+            return False
+        hashed = hash_password(user.password) if user.password else None
+        self.users[user.username] = (user.model_copy(update={"password": None}), hashed)
+        return True
+
+    def update(self, user: User) -> bool:
+        entry = self.users.get(user.username)
+        if entry is None:
+            return False
+        hashed = hash_password(user.password) if user.password else entry[1]
+        self.users[user.username] = (user.model_copy(update={"password": None}), hashed)
+        return True
+
+    def delete(self, username: str) -> bool:
+        return self.users.pop(username, None) is not None
