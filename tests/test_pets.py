@@ -5,31 +5,8 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models import Pet
-from app.stores.pets import PetStore, get_pet_store
-
-
-class FakePetStore(PetStore):
-    def __init__(self) -> None:
-        self.pets: dict[int, Pet] = {}
-
-    def get(self, pet_id: int) -> Pet | None:
-        return self.pets.get(pet_id)
-
-    def put(self, pet: Pet) -> None:
-        assert pet.id is not None
-        self.pets[pet.id] = pet
-
-    def replace(self, pet: Pet) -> bool:
-        if pet.id not in self.pets:
-            return False
-        self.put(pet)
-        return True
-
-    def delete(self, pet_id: int) -> bool:
-        return self.pets.pop(pet_id, None) is not None
-
-    def by_status(self, status: str) -> list[Pet]:
-        return [p for p in self.pets.values() if p.status == status]
+from app.stores.pets import get_pet_store
+from tests.fakes import FakePetStore
 
 
 @pytest.fixture

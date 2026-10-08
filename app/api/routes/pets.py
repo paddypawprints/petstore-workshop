@@ -1,8 +1,8 @@
-import secrets
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.core.ids import new_id
 from app.models import PET_STATUSES, Pet
 from app.stores.pets import PetStore, get_pet_store
 
@@ -11,15 +11,10 @@ router = APIRouter(prefix="/pet", tags=["pet"])
 Store = Annotated[PetStore, Depends(get_pet_store)]
 
 
-def _new_id() -> int:
-    # Random, so two hosts never hand out the same id; below 2**53 so JavaScript keeps it exact.
-    return secrets.randbelow(2**53 - 1) + 1
-
-
 @router.post("", response_model_exclude_none=True)
 def add_pet(pet: Pet, store: Store) -> Pet:
     if pet.id is None:
-        pet = pet.model_copy(update={"id": _new_id()})
+        pet = pet.model_copy(update={"id": new_id()})
     store.put(pet)
     return pet
 

@@ -68,6 +68,21 @@ class PetStore:
                 return pets
             kwargs["ExclusiveStartKey"] = page["LastEvaluatedKey"]
 
+    def count_by_status(self, status: str) -> int:
+        # Select=COUNT returns only how many items matched, not the items themselves.
+        kwargs: dict[str, Any] = {
+            "IndexName": STATUS_INDEX,
+            "KeyConditionExpression": Key("status").eq(status),
+            "Select": "COUNT",
+        }
+        total = 0
+        while True:
+            page = self._table.query(**kwargs)
+            total += int(page["Count"])
+            if "LastEvaluatedKey" not in page:
+                return total
+            kwargs["ExclusiveStartKey"] = page["LastEvaluatedKey"]
+
 
 def get_pet_store() -> PetStore:
     return PetStore(table(get_settings().pets_table))
