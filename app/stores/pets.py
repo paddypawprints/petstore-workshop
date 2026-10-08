@@ -49,10 +49,11 @@ class PetStore:
             raise
         return True
 
-    def delete(self, pet_id: int) -> bool:
-        """Delete a pet. False if there was nothing to delete."""
+    def delete(self, pet_id: int) -> Pet | None:
+        """Delete a pet and return what was deleted, or None if there was nothing."""
         response = self._table.delete_item(Key={"petId": pet_id}, ReturnValues="ALL_OLD")
-        return "Attributes" in response
+        item = response.get("Attributes")
+        return _to_pet(item) if item else None
 
     def by_status(self, status: str) -> list[Pet]:
         # Query the GSI, following LastEvaluatedKey until DynamoDB stops paging.

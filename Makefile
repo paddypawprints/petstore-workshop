@@ -1,4 +1,4 @@
-.PHONY: run test lint format typecheck package-login package-authorizer
+.PHONY: run test lint format typecheck package-login package-authorizer package-photos
 
 PYTHON ?= python
 
@@ -24,3 +24,7 @@ package-login:
 package-authorizer:
 	mkdir -p dist
 	cd lambdas/authorizer && zip -j ../../dist/authorizer.zip handler.py
+
+package-photos:
+	mkdir -p dist
+	cd lambdas/photos && zip -j ../../dist/photos.zip handler.py

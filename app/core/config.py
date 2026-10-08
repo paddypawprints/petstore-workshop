@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     sessions_table: str = Field(default="petstore-g1-sessions", alias="SESSIONS_TABLE")
     pets_table: str = Field(default="petstore-g1-pets", alias="PETS_TABLE")
     orders_table: str = Field(default="petstore-g1-orders", alias="ORDERS_TABLE")
+    photos_function: str = Field(default="petstore-g1-photos", alias="PHOTOS_FUNCTION")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

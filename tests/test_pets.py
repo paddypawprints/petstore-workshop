@@ -3,10 +3,11 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.photos import PhotoCleaner, get_photo_cleaner, photo_files
 from app.main import app
 from app.models import Pet
 from app.stores.pets import get_pet_store
-from tests.fakes import FakePetStore
+from tests.fakes import FakePetStore, FakePhotoCleaner
 
 
 @pytest.fixture
@@ -85,6 +86,43 @@ def test_update_with_form(store: FakePetStore) -> None:
     assert client.post("/pet/2?status=lost").status_code == 400
 
 
-def test_delete_pet(store: FakePetStore) -> None:
+@pytest.fixture
+def photos() -> Iterator[FakePhotoCleaner]:
+    fake = FakePhotoCleaner()
+    app.dependency_overrides[get_photo_cleaner] = lambda: fake
+    yield fake
+    app.dependency_overrides.clear()
+
+
+def test_delete_pet_cleans_up_photos(store: FakePetStore, photos: FakePhotoCleaner) -> None:
     assert client.delete("/pet/1").status_code == 200
     assert client.delete("/pet/1").status_code == 404
+    assert [p.id for p in photos.deleted] == [1]
+
+
+def test_photo_files_keeps_only_this_pets_api_paths() -> None:
+    pet = Pet(
+        id=7,
+        name="x",
+        photoUrls=["/pet/7/photos/a.png", "/pet/8/photos/b.png", "data:image/png;base64,AAA"],
+    )
+    assert photo_files(pet) == ["a.png"]
+
+
+class RecordingLambda:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, object]] = []
+
+    def invoke(self, **kwargs: object) -> None:
+        self.calls.append(kwargs)
+
+
+def test_cleaner_invokes_lambda_async_only_when_there_are_photos() -> None:
+    client_ = RecordingLambda()
+    cleaner = PhotoCleaner(client_, "petstore-g1-photos")
+
+    cleaner.delete_pet_photos(Pet(id=7, name="x"))
+    cleaner.delete_pet_photos(Pet(id=7, name="x", photoUrls=["/pet/7/photos/a.png"]))
+
+    assert len(client_.calls) == 1
+    assert client_.calls[0]["InvocationType"] == "Event"

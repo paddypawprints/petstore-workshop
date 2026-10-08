@@ -1,5 +1,6 @@
 """In-memory stand-ins for the DynamoDB stores, swapped in with app.dependency_overrides."""
 
+from app.core.photos import PhotoCleaner
 from app.models import Order, Pet, User
 from app.stores.orders import OrderStore
 from app.stores.pets import PetStore
@@ -23,8 +24,8 @@ class FakePetStore(PetStore):
         self.put(pet)
         return True
 
-    def delete(self, pet_id: int) -> bool:
-        return self.pets.pop(pet_id, None) is not None
+    def delete(self, pet_id: int) -> Pet | None:
+        return self.pets.pop(pet_id, None)
 
     def by_status(self, status: str) -> list[Pet]:
         return [p for p in self.pets.values() if p.status == status]
@@ -74,3 +75,11 @@ class FakeUserStore(UserStore):
 
     def delete(self, username: str) -> bool:
         return self.users.pop(username, None) is not None
+
+
+class FakePhotoCleaner(PhotoCleaner):
+    def __init__(self) -> None:
+        self.deleted: list[Pet] = []
+
+    def delete_pet_photos(self, pet: Pet) -> None:
+        self.deleted.append(pet)

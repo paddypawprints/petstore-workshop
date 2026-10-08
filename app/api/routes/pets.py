@@ -3,12 +3,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.ids import new_id
+from app.core.photos import PhotoCleaner, get_photo_cleaner
 from app.models import PET_STATUSES, Pet
 from app.stores.pets import PetStore, get_pet_store
 
 router = APIRouter(prefix="/pet", tags=["pet"])
 
 Store = Annotated[PetStore, Depends(get_pet_store)]
+Photos = Annotated[PhotoCleaner, Depends(get_photo_cleaner)]
 
 
 @router.post("", response_model_exclude_none=True)
@@ -65,7 +67,9 @@ def update_pet_with_form(
 
 
 @router.delete("/{petId}")
-def delete_pet(petId: int, store: Store) -> dict[str, str]:
-    if not store.delete(petId):
+def delete_pet(petId: int, store: Store, photos: Photos) -> dict[str, str]:
+    pet = store.delete(petId)
+    if pet is None:
         raise HTTPException(status_code=404, detail="Pet not found")
+    photos.delete_pet_photos(pet)
     return {"message": "Pet deleted"}
